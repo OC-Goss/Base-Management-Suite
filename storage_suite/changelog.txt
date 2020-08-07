@@ -1,0 +1,13 @@
+I Don't Usually do this, so here's hoping.
+
+Storage Version 2.5:
+    Fixed minor graphical bugs with version 2. Moved around component calls to give the illusion of speed.
+    
+Client Version 0.1:
+    Got angry at tier 1 GPUs, want to move calls fully to buffer but also don't want to drop tier 1 support.
+
+Storage Version 2.7:
+    Added basic network handling, still needs to be reworked
+    
+Client Version 0.8:
+    First fully functional release. Has a few graphical bugs and limitations to be fixed before V1.
