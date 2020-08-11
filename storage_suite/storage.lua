@@ -203,7 +203,7 @@ function request_menu(ledger)
 			if not options[i + 2*scroll] then break end 
 			local label = options[i + 2*scroll].label
 			label = string.sub(label,1,math.min(#label,screenX/2 - 3))
-			label = gui.rpad(label, screenX / 2 - #label)
+			label = gui.rpad(label, screenX / 2 - 1)
 			if i%2~=0 then
 				gpu.set(1,math.floor(i/2)+2," ".. label)
 			else
