@@ -11,6 +11,11 @@ local storage_port = 86
 modem.open(storage_port)
 local Swidth, Sheight = gpu.getResolution()
 
+-- Activate Wireless Card --
+if modem.isWireless() then
+	modem.setStrength(200);
+end
+
 -- I hate tier 1 GPUs, they only have buffer space for a single screen
 local ADV_GPU = gpu.maxDepth() > 1 -- Whether to use VRAM buffers and colors
 
@@ -81,8 +86,8 @@ function request_menu()
 	local loop = true
 	-- local Swidth,Sheight = gpu.getResolution()
 	local search = ""
-	local cursor_color = 0xff0000
-	local bg_color = 0x004455
+	local cursor_color = 0x03fcf4
+	local bg_color = 0x2e3b3a
 	local options = global_options
 	local motionTimer = true
 	local buffer = gpu.allocateBuffer(Swidth, Sheight - 2)
@@ -128,14 +133,15 @@ function request_menu()
 					scroll = scroll + 1
 				end
 			elseif code==28 then -- Enter
-				local amt = amount_popup()				
+				local amt = amount_popup()
+				message_bar = "Trying to Fetch "..amt.." "..options[convert(cursor.x,cursor.y)][1]
 				gpu.fill(1,2,Swidth,Sheight-2, " ")
-				modem.broadcast(storage_port, "FETCH", options[convert(cursor.x,cursor.y)].name, amt)
+				modem.broadcast(storage_port, "FETCH", options[convert(cursor.x,cursor.y)][1], tonumber(amt))
 				search = ""
 			elseif char then
 				search = string.char(char)
 				for i=1,#options do
-					if string.lower(string.sub(options[i].label,1,1)) == string.lower(search) then
+					if string.lower(string.sub(options[i][1],1,1)) == string.lower(search) then
 						cursor.x = math.ceil(i/2)
 						cursor.y = 2 - (i%2)
 						scroll = cursor.x - 1
@@ -154,9 +160,9 @@ function request_menu()
 			end
 		end
 		
-		--gpu.set(1,1,"Free Slots: "..free_space)
-		--gpu.set(Swidth/2,1,"Amount: "..math.floor(item_ledger[options[convert(cursor.x,cursor.y)].name].size).."x")
-		
+		if options[convert(cursor.x,cursor.y)] then
+			gpu.set(Swidth/2,1,"Amount: ".. math.floor(options[convert(cursor.x,cursor.y)][2]) .."x            ")
+		end
 		-- Display item list --
 		if ADV_GPU then 
             gpu.setActiveBuffer(buffer) 
@@ -170,7 +176,7 @@ function request_menu()
 				gpu.setBackground(bg_color)
 			end
 			if not options[i + 2*scroll] then break end 
-			local label = options[i + 2*scroll].label
+			local label = options[i + 2*scroll][1]
 			label = string.sub(label,1,math.min(#label,Swidth/2 - 3))
 			if i%2~=0 then
 				gpu.set(1,math.floor(i/2) + 1," ".. label)

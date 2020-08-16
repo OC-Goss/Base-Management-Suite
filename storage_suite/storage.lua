@@ -10,6 +10,10 @@ local color = gpu.maxDepth() > 1
 local modem = comp.modem
 local storage_port = 86
 modem.open(storage_port)
+-- Open wireless modem, if it exists
+if modem.isWireless() then
+	modem.setStrength(200)
+end
 local serial = require("serialization")
 local gui = require("gui")
 
@@ -51,11 +55,12 @@ function build_ledger()
 			end
 		end
 	end
+	-- Options table entry looks like this {label, amount} --
 	global_options = {}
 	for name, v in pairs(item_ledger) do
-		table.insert(global_options, {name=name,label=v.label})
+		table.insert(global_options, {name,v.size})
 	end
-	table.sort(global_options, function(a,b) return a.label < b.label end)
+	table.sort(global_options, function(a,b) return a[1] < b[1] end)
 	event.push("rebuilt")
     modem.broadcast(storage_port, "UPDATE", serial.serialize(global_options))
 	return true, global_options
@@ -159,13 +164,13 @@ function request_menu(ledger)
 			elseif code==28 then -- Enter
 				local amt = amount_popup()				
 				gpu.fill(1,2,screenX,screenY-2, " ")
-				request_thread = thread.create(fill_request, options[convert(cursor.x,cursor.y)].name, amt)
+				request_thread = thread.create(fill_request, options[convert(cursor.x,cursor.y)][1], amt)
 				build_thread = thread.create(build_ledger)
 				search = ""
 			elseif char then
 				search = string.char(char)
 				for i=1,#options do
-					if string.lower(string.sub(options[i].label,1,1)) == string.lower(search) then
+					if string.lower(string.sub(options[i][1],1,1)) == string.lower(search) then
 						cursor.x = math.ceil(i/2)
 						cursor.y = 2 - (i%2)
 						scroll = cursor.x - 1
@@ -191,7 +196,9 @@ function request_menu(ledger)
 		if options ~= global_options then
 			options = global_options
 		end
-		gpu.set(screenX/2,1,"Amount: "..math.floor(item_ledger[options[convert(cursor.x,cursor.y)].name].size).."x")
+		if options[convert(cursor.x,cursor.y)][2] then
+			gpu.set(screenX/2 + 1,1,"Amount: "..math.floor(options[convert(cursor.x,cursor.y)][2]).."x")
+		end
 		-- gpu.set(1,screenY,"X: "..cursor.x.." Y: "..cursor.y) -- For testing cursor position
 		-- Display item list
 		for i=1,2*(screenY-2) do
@@ -201,7 +208,7 @@ function request_menu(ledger)
 				gpu.setBackground(bg_color)
 			end
 			if not options[i + 2*scroll] then break end 
-			local label = options[i + 2*scroll].label
+			local label = options[i + 2*scroll][1]
 			label = string.sub(label,1,math.min(#label,screenX/2 - 3))
 			label = gui.rpad(label, screenX / 2 - 1)
 			if i%2~=0 then
@@ -265,7 +272,7 @@ function network_request(_,_,from_addr,port,dist,...)
 		modem.broadcast(storage_port, "UPDATE", serial.serialize(global_options))
 	elseif msg[1] == "FETCH" then
 		-- msg[2] is the item name and msg[3] is the amount
-		modem.send(from_addr,port, "REQUEST_STATUS", fill_request(msg[2], msg[3]))
+		modem.send(from_addr, port, "REQUEST_STATUS", fill_request(msg[2], tonumber(msg[3])))
 	end
 end
 event.listen("modem_message", network_request)

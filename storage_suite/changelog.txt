@@ -11,3 +11,6 @@ Storage Version 2.7:
     
 Client Version 0.8:
     First fully functional release. Has a few graphical bugs and limitations to be fixed before V1.
+
+    Storage now requires GUI.lua
+    
