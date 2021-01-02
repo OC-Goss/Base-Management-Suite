@@ -1,7 +1,7 @@
 -- COPYRIGHT AUG 2020, James Gottshall --
 -- Version 0.8 --
 -- Thin Client for the storage system suite --
-
+local minitel = require "minitel" -- requires minitel
 local comp = require("component")
 local event = require("event")
 local gpu = comp.gpu

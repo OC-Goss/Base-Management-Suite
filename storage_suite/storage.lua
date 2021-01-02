@@ -1,14 +1,26 @@
 -- COPYRIGHT AUG 2020, James Gottshall --
--- Version: 2.7 --
-
-local comp = require("component")
-local sides = require("sides")
-local event = require("event")
+-- Version: 2.8 --
+local minitel = require "minitel" -- requires minitel, for data streams
+local comp = require "component" 
+local sides = require "sides"
+local event = require "event"
 local gpu = comp.gpu
 local thread = require("thread")
 local color = gpu.maxDepth() > 1
-local modem = comp.modem
+local modem = false
+-- search for modems
+for addr, name in comp.list("modem", true) do
+   modem = comp.proxy(addr)
+   break -- break out of the loop, we got him boys
+end
+-- if modem doesn't exist, override it's metatable to act as a "Yes Man"
+if not modem then
+    modem = {}
+    setmetatable(modem,  {__index = function() return function(...) return true end end})
+end
+
 local storage_port = 86
+
 modem.open(storage_port)
 -- Open wireless modem, if it exists
 if modem.isWireless() then
@@ -77,6 +89,7 @@ function amount_popup()
 		oldbg = gpu.setBackground(popup_bg)
 		oldfg = gpu.setForeground(popup_fg)
 	end
+    -- Draw the amount dialog
 	gpu.set(width/2-4,height/2,"/--------\\")
 	gpu.set(width/2-4,height/2+1,"| Amount |")
 	gpu.set(width/2-4,height/2+2,"|        |")
@@ -262,6 +275,7 @@ function fill_request(item_name, amount)
 	return total
 end
 
+local hosts = {}
 -- Network Callback Function
 function network_request(_,_,from_addr,port,dist,...)
 	local msg = {...}
@@ -269,12 +283,18 @@ function network_request(_,_,from_addr,port,dist,...)
 	if msg[1] == "GET" then
 		-- msg[2] is the start index and msg[3] is the end index
 		-- TODO: implement above
-		modem.broadcast(storage_port, "UPDATE", serial.serialize(global_options))
+        -- Send updated ledger over available streams
+		minitel.send(storage_port, "UPDATE", serial.serialize(global_options))
 	elseif msg[1] == "FETCH" then
 		-- msg[2] is the item name and msg[3] is the amount
 		modem.send(from_addr, port, "REQUEST_STATUS", fill_request(msg[2], tonumber(msg[3])))
-	end
+    elseif msg[1] == "REGISTER" then
+       -- Register API call, adds the sender to the hosts table
+        table.insert(hosts, from)
+        minitel.send(hosts[#hosts], storage_port, "Successfully Registered")
+    end
 end
+
 event.listen("modem_message", network_request)
 
 -- Program Starts Here --
